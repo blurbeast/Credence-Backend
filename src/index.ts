@@ -1,9 +1,16 @@
 import express from 'express'
 
+import { AttestationRepository } from './repositories/attestationRepository.js'
+import { createAttestationRouter } from './routes/attestations.js'
+
 const app = express()
 const PORT = process.env.PORT ?? 3000
 
 app.use(express.json())
+
+// Attestation API
+const attestationRepo = new AttestationRepository()
+app.use('/api/attestations', createAttestationRouter(attestationRepo))
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'credence-backend' })
