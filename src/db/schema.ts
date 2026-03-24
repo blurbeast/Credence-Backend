@@ -52,14 +52,29 @@ const CREATE_TABLE_STATEMENTS = [
     computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )
   `,
+  `
+  CREATE TABLE IF NOT EXISTS settlements (
+    id BIGSERIAL PRIMARY KEY,
+    bond_id BIGINT NOT NULL REFERENCES bonds(id) ON DELETE CASCADE,
+    amount NUMERIC(20, 7) NOT NULL CHECK (amount >= 0),
+    transaction_hash TEXT NOT NULL,
+    settled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'settled', 'failed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT settlements_bond_tx_unique UNIQUE (bond_id, transaction_hash)
+  )
+  `,
   `CREATE INDEX IF NOT EXISTS bonds_identity_address_idx ON bonds (identity_address)`,
   `CREATE INDEX IF NOT EXISTS attestations_subject_address_idx ON attestations (subject_address)`,
   `CREATE INDEX IF NOT EXISTS attestations_bond_id_idx ON attestations (bond_id)`,
   `CREATE INDEX IF NOT EXISTS slash_events_bond_id_idx ON slash_events (bond_id)`,
   `CREATE INDEX IF NOT EXISTS score_history_identity_address_idx ON score_history (identity_address)`,
+  `CREATE INDEX IF NOT EXISTS settlements_bond_settled_idx ON settlements (bond_id, settled_at DESC, id DESC)`,
 ] as const
 
 const DROP_TABLE_STATEMENTS = [
+  'DROP TABLE IF EXISTS settlements',
   'DROP TABLE IF EXISTS score_history',
   'DROP TABLE IF EXISTS slash_events',
   'DROP TABLE IF EXISTS attestations',
@@ -75,7 +90,7 @@ export async function createSchema(db: Queryable): Promise<void> {
 
 export async function resetDatabase(db: Queryable): Promise<void> {
   await db.query(
-    'TRUNCATE TABLE score_history, slash_events, attestations, bonds, identities RESTART IDENTITY CASCADE'
+    'TRUNCATE TABLE settlements, score_history, slash_events, attestations, bonds, identities RESTART IDENTITY CASCADE'
   )
 }
 
