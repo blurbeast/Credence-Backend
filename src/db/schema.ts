@@ -53,16 +53,14 @@ const CREATE_TABLE_STATEMENTS = [
   )
   `,
   `
-  CREATE TABLE IF NOT EXISTS settlements (
-    id BIGSERIAL PRIMARY KEY,
-    bond_id BIGINT NOT NULL REFERENCES bonds(id) ON DELETE CASCADE,
-    amount NUMERIC(20, 7) NOT NULL CHECK (amount >= 0),
-    transaction_hash TEXT NOT NULL,
-    settled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'settled', 'failed')),
+  CREATE TABLE IF NOT EXISTS report_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed')),
+    failure_reason TEXT,
+    artifact_url TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT settlements_bond_tx_unique UNIQUE (bond_id, transaction_hash)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )
   `,
   `CREATE INDEX IF NOT EXISTS bonds_identity_address_idx ON bonds (identity_address)`,
@@ -74,7 +72,7 @@ const CREATE_TABLE_STATEMENTS = [
 ] as const
 
 const DROP_TABLE_STATEMENTS = [
-  'DROP TABLE IF EXISTS settlements',
+  'DROP TABLE IF EXISTS report_jobs',
   'DROP TABLE IF EXISTS score_history',
   'DROP TABLE IF EXISTS slash_events',
   'DROP TABLE IF EXISTS attestations',
@@ -90,7 +88,7 @@ export async function createSchema(db: Queryable): Promise<void> {
 
 export async function resetDatabase(db: Queryable): Promise<void> {
   await db.query(
-    'TRUNCATE TABLE settlements, score_history, slash_events, attestations, bonds, identities RESTART IDENTITY CASCADE'
+    'TRUNCATE TABLE report_jobs, score_history, slash_events, attestations, bonds, identities RESTART IDENTITY CASCADE'
   )
 }
 
